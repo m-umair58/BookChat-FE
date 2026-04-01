@@ -1,0 +1,220 @@
+@import "tailwindcss";
+
+/*
+  Solid surfaces only — no background gradients.
+  Tokens support a modern, restrained multi-accent dark UI.
+*/
+:root {
+  /* Canvas & elevation */
+  --bg: #0b0d12;
+  --surface-raised: #12161e;
+  --surface-card: #181c27;
+  --surface-input: #10141c;
+  --surface-muted: #1e2430;
+
+  --border: #2c3344;
+  --border-strong: #3d4658;
+
+  /* Typography */
+  --text: #eef1f6;
+  --muted: #9098aa;
+  --faint: #5c6478;
+
+  /* Primary — cool cyan-blue (actions, focus, assistant bar) */
+  --accent: #6db3d4;
+  --accent-hover: #84c4e0;
+  --accent-press: #5599b8;
+  --accent-muted: #3d7a96;
+  --accent-subtle: rgba(109, 179, 212, 0.14);
+
+  /* Secondary — warm sand (highlights, labels, optional emphasis) */
+  --accent-warm: #c4a882;
+  --accent-warm-subtle: rgba(196, 168, 130, 0.12);
+
+  /* Status */
+  --success: #7cb89a;
+  --warning: #d9a66a;
+  --warning-bg: rgba(217, 166, 106, 0.12);
+  --danger: #d67878;
+  --danger-bg: rgba(214, 120, 120, 0.1);
+  --danger-border: rgba(214, 120, 120, 0.45);
+
+  /* Aliases used across the app */
+  --panel: var(--surface-raised);
+  --panel-soft: var(--surface-card);
+  --chat-thread: var(--surface-input);
+  --chat-user: #252b3a;
+  --chat-assistant: #161b25;
+  --chat-assistant-bar: var(--accent);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display), ui-serif, Georgia, "Times New Roman", serif;
+  font-weight: 600;
+}
+
+/* Visible keyboard focus — matches accent tokens */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
+}
+
+::selection {
+  background-color: var(--accent-subtle);
+  color: var(--text);
+}
+
+@keyframes chat-dots {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.chat-thinking-dot {
+  animation: chat-dots 1.1s ease-in-out infinite;
+}
+.chat-thinking-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.chat-thinking-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-thinking-dot {
+    animation: none;
+    opacity: 0.85;
+  }
+}
+
+/* Skeleton shimmer (disabled when user prefers reduced motion) */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface-muted) 0%,
+    var(--border) 48%,
+    var(--surface-muted) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+    background: var(--surface-muted);
+  }
+}
+
+@keyframes voice-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(109, 179, 212, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(109, 179, 212, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(109, 179, 212, 0);
+  }
+}
+
+@keyframes voice-wave {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.voice-recording {
+  animation: voice-ring 1.4s ease-out infinite;
+}
+
+.voice-orb::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 9999px;
+  border: 1px solid rgba(109, 179, 212, 0.5);
+  animation: voice-ring 1.2s ease-out infinite;
+}
+
+.voice-bars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 14px;
+}
+
+.voice-bars span {
+  width: 2px;
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--accent);
+  transform-origin: center;
+  animation: voice-wave 0.8s ease-in-out infinite;
+}
+
+.voice-bars span:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.voice-bars span:nth-child(3) {
+  animation-delay: 0.2s;
+}
+.voice-bars span:nth-child(4) {
+  animation-delay: 0.3s;
+}
+.voice-bars span:nth-child(5) {
+  animation-delay: 0.4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-recording,
+  .voice-orb::after,
+  .voice-bars span {
+    animation: none;
+  }
+}
