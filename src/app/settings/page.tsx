@@ -1,7 +1,21 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
+import { API_BASE_URL } from "@/lib/api";
 import { useWorkspaceApp } from "@/providers/WorkspaceAppProvider";
 import type { ProviderChoice, TtsMode } from "@/lib/appSettings";
+
+type ServerInfoPayload = {
+  vector_store: "faiss" | "pinecone";
+  vector_store_env: string;
+  vector_store_label: string;
+  pinecone_indexes?: {
+    default: string | null;
+    ollama: string | null;
+    google: string | null;
+  } | null;
+};
 
 function Segmented<T extends string>({
   label,
@@ -41,6 +55,13 @@ function Segmented<T extends string>({
   );
 }
 
+function envModeLabel(mode: string): string {
+  if (mode === "auto") return "Auto (Pinecone if API key + index are set, else FAISS)";
+  if (mode === "pinecone") return "Forced: Pinecone";
+  if (mode === "faiss") return "Forced: FAISS";
+  return mode;
+}
+
 export default function SettingsPage() {
   const {
     embeddingProvider,
@@ -50,6 +71,41 @@ export default function SettingsPage() {
     ttsMode,
     setTtsMode,
   } = useWorkspaceApp();
+
+  const [serverInfo, setServerInfo] = useState<ServerInfoPayload | null>(null);
+  const [serverInfoError, setServerInfoError] = useState<string | null>(null);
+  const [serverInfoLoading, setServerInfoLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setServerInfoLoading(true);
+    setServerInfoError(null);
+    void fetch(`${API_BASE_URL}/server/info`)
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json() as Promise<ServerInfoPayload>;
+      })
+      .then((data) => {
+        if (!cancelled) {
+          setServerInfo(data);
+          setServerInfoError(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setServerInfo(null);
+          setServerInfoError("Could not load server info. Is the API running?");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setServerInfoLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 md:px-8">
@@ -62,6 +118,73 @@ export default function SettingsPage() {
       </header>
 
       <div className="space-y-10">
+        <section
+          className="rounded-xl border border-[var(--border)] bg-[var(--panel-soft)] p-4 md:p-5"
+          aria-labelledby="vector-db-heading"
+        >
+          <h2
+            id="vector-db-heading"
+            className="text-sm font-semibold uppercase tracking-wider text-[var(--muted)]"
+          >
+            Backend vector database
+          </h2>
+          <p className="mt-1 text-xs text-[var(--faint)]">
+            Configured on the API server (<span className="font-mono text-[var(--muted)]">{API_BASE_URL}</span>
+            ). This is where book embeddings are stored for retrieval.
+          </p>
+          {serverInfoLoading ? (
+            <p className="mt-3 text-sm text-[var(--muted)]">Loading…</p>
+          ) : serverInfoError ? (
+            <p className="mt-3 text-sm text-[var(--warning)]">{serverInfoError}</p>
+          ) : serverInfo ? (
+            <div className="mt-4 space-y-3 text-sm text-[var(--text)]">
+              <div>
+                <span className="text-[var(--muted)]">Active store: </span>
+                <span className="font-medium">{serverInfo.vector_store_label}</span>
+                <span className="ml-2 rounded-md bg-[var(--chat-thread)] px-2 py-0.5 font-mono text-[11px] text-[var(--muted)]">
+                  {serverInfo.vector_store}
+                </span>
+              </div>
+              <p className="text-xs leading-relaxed text-[var(--muted)]">
+                <span className="text-[var(--faint)]">Config mode: </span>
+                {envModeLabel(serverInfo.vector_store_env)}
+              </p>
+              {serverInfo.vector_store === "pinecone" && serverInfo.pinecone_indexes ? (
+                <div className="overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--chat-thread)]">
+                  <table className="w-full min-w-[280px] text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-[var(--border)] text-[var(--faint)]">
+                        <th className="px-3 py-2 font-medium">Scope</th>
+                        <th className="px-3 py-2 font-medium">Pinecone index name</th>
+                      </tr>
+                    </thead>
+                    <tbody className="font-mono text-[var(--text)]">
+                      <tr className="border-b border-[var(--border)]/60">
+                        <td className="px-3 py-2 text-[var(--muted)]">Default / fallback</td>
+                        <td className="px-3 py-2">{serverInfo.pinecone_indexes.default ?? "—"}</td>
+                      </tr>
+                      <tr className="border-b border-[var(--border)]/60">
+                        <td className="px-3 py-2 text-[var(--muted)]">Ollama embeddings</td>
+                        <td className="px-3 py-2">{serverInfo.pinecone_indexes.ollama ?? "—"}</td>
+                      </tr>
+                      <tr>
+                        <td className="px-3 py-2 text-[var(--muted)]">Google embeddings</td>
+                        <td className="px-3 py-2">{serverInfo.pinecone_indexes.google ?? "—"}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
+              {serverInfo.vector_store === "faiss" ? (
+                <p className="text-xs text-[var(--muted)]">
+                  Indexes live under the API&apos;s <code className="rounded bg-[var(--chat-thread)] px-1">data/indices/</code>{" "}
+                  directory on disk.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
+
         <Segmented<ProviderChoice>
           label="Embeddings (indexing & retrieval)"
           value={embeddingProvider}
